@@ -2,7 +2,6 @@ package httplistener
 
 import (
 	"fmt"
-	"time"
 	"github.com/spf13/viper"
 	"gopkg.in/go-playground/webhooks.v5/gogs"
 	"net/http"
@@ -42,60 +41,35 @@ func (hl *HTTPListener) gogsHandler(w http.ResponseWriter, request *http.Request
 	repo := ""
 	send := false
 
-
-	pl := payload.(client.PushPayload)
-	
-	send = true
-
-	log.Infof("gogs: %v", pl)
-	msgs, err = hl.renderTemplate("gogs.push", payload)
-
-	
-
-	/*
 	switch payload.(type) {
-	case gogs.ReleasePayload:
-		pl := payload.(gogs.ReleasePayload)
+	case client.ReleasePayload:
+		pl := payload.(client.ReleasePayload)
 		if pl.Action == "published" {
 			send = true
 			msgs, err = hl.renderTemplate("gogs.release", payload)
 			repo = pl.Repository.Name
 		}
-	case gogs.PushPayload:
-		pl := payload.(gogs.PushPayload)
+	case client.PushPayload:
+		pl := payload.(client.PushPayload)
 		send = true
 		msgs, err = hl.renderTemplate("gogs.push", payload)
-		repo = pl.Repository.Name
-	case gogs.IssuesPayload:
-		pl := payload.(gogs.IssuesPayload)
-		if interestingIssueAction(pl.Action) {
-			send = true
-			msgs, err = hl.renderTemplate("gogs.issue", payload)
-			repo = pl.Repository.Name
-		}
-	case gogs.IssueCommentPayload:
-		pl := payload.(gogs.IssueCommentPayload)
+		repo = pl.Repo.Name
+	case client.IssueCommentPayload:
+		pl := payload.(client.IssueCommentPayload)
 		if pl.Action == "created" {
 			send = true
 			msgs, err = hl.renderTemplate("gogs.issuecomment", payload)
 			repo = pl.Repository.Name
 		}
-	case gogs.PullRequestPayload:
-		pl := payload.(gogs.PullRequestPayload)
-		if interestingIssueAction(pl.Action) {
+	case client.PullRequestPayload:
+		pl := payload.(client.PullRequestPayload)
+		if interestingIssueAction(string(pl.Action)) {
 			send = true
 			msgs, err = hl.renderTemplate("gogs.pullrequest", payload)
 			repo = pl.Repository.Name
 		}
-	case gogs.CheckSuitePayload:
-		pl := payload.(gogs.CheckSuitePayload)
-		if pl.CheckSuite.Status == "completed" && pl.CheckSuite.Conclusion == "failure" {
-			send = true
-			msgs, err = hl.renderTemplate("gogs.checksuite", payload)
-			repo = pl.Repository.Name
-		}
 	}
-*/
+
 	if err != nil {
 		log.Errorf("Error rendering Gogs event template: %s", err)
 		return
