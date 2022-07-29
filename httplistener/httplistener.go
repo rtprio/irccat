@@ -40,6 +40,11 @@ func New(irc *irc.Connection) (*HTTPListener, error) {
 		mux.HandleFunc("/github", hl.githubHandler)
 	}
 
+	if viper.IsSet("http.listeners.gogs") {
+		log.Infof("Listening for GitHub webhooks at /gogs")
+		mux.HandleFunc("/gogs", hl.gogsHandler)
+	}
+
 	if viper.IsSet("http.listeners.prometheus") {
 		log.Infof("Listening for Prometheus Alertmanager webhooks at /prometheus")
 		mux.HandleFunc("/prometheus", hl.prometheusHandler)
