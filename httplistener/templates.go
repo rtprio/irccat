@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/irccloud/irccat/util"
 	"gopkg.in/go-playground/webhooks.v5/github"
+	gogsclient "github.com/gogits/go-gogs-client"
 	"strings"
 	"text/template"
 )
@@ -19,6 +20,16 @@ var defaultTemplates = map[string]string{
 	"github.issuecomment": "[{{b .Repository.Name}}] {{g .Comment.User.Login}} commented on issue #{{.Issue.Number}}: {{trunc .Comment.Body 150}} {{.Comment.HTMLURL}}",
 	"github.pullrequest":  "[{{b .Repository.Name}}] {{g .Sender.Login}} {{if .PullRequest.Merged}}merged{{else}}{{.Action}}{{end}} pull request #{{.PullRequest.Number}} (\x0303{{.PullRequest.Base.Ref}}…{{.PullRequest.Head.Ref}}\x0f): {{.PullRequest.Title}} {{.PullRequest.HTMLURL}}",
 	"github.checksuite":   "[{{b .Repository.Name}}] check suite {{b .CheckSuite.Conclusion}}",
+	"gogs.release": "[{{b .Repository.Name}}] release {{h .Release.TagName}} has been published by {{g .Release.Author.Login}}: {{.Release.HTMLURL}}",
+	"gogs.push": `[{{b .Repo.Name}}] {{g .Sender.Login}} pushed {{if .Commits}}{{.Commits|len}} commit{{if .Commits|len|lt 1}}s{{end}} to {{end}}{{.Ref|refType}} {{.Ref|refName|h}}: {{.CompareURL}}
+{{range gogscommitLimit . 3}}
+ • {{g .Username}} ({{.Sha|truncateSha|h}}): {{trunc .Message 150}}
+{{end}}`,
+	"gogs.issue":        "[{{b .Repo.FullName}}] {{.Sender.Login}} {{.Action}} issue #{{.Issue.Number}}: {{.Issue.Title}} {{.Issue.HTMLURL}}",
+	"gogs.issuecomment": "[{{b .Repository.Name}}] {{g .Comment.User.Login}} commented on issue #{{.Issue.Number}}: {{trunc .Comment.Body 150}} {{.Comment.HTMLURL}}",
+	"gogs.pullrequest":  "[{{b .Repository.Name}}] {{g .Sender.Login}} {{if .PullRequest.Merged}}merged{{else}}{{.Action}}{{end}} pull request #{{.PullRequest.Number}} (\x0303{{.PullRequest.Base.Ref}}…{{.PullRequest.Head.Ref}}\x0f): {{.PullRequest.Title}} {{.PullRequest.HTMLURL}}",
+	"gogs.checksuite":   "[{{b .Repository.Name}}] check suite {{b .CheckSuite.Conclusion}}",
+
 	"prometheus.alert": `{{range .Alerts}}[{{b "Prometheus"}}] {{if (eq .Status "firing")}}{{b "alerting"}}{{else}}{{h "resolved"}}{{end}}: {{.Annotations.summary}}
 {{end}}`,
 }
@@ -66,6 +77,7 @@ func parseTemplates() *template.Template {
 		"refType":     refType,
 		"refName":     refName,
 		"commitLimit": commitLimit,
+		"gogscommitLimit": gogscommitLimit,
 		"b":           boldFormat,
 		"g":           greyFormat,
 		"h":           highlightFormat,
@@ -108,6 +120,20 @@ func commitLimit(pl github.PushPayload, length int) []Commit {
 			continue
 		}
 		res = append(res, Commit{Message: c.Message, Username: c.Author.Username, Sha: c.ID})
+		i += 1
+		if i == length {
+			break
+		}
+	}
+	return res
+}
+
+
+func gogscommitLimit(pl gogsclient.PushPayload, length int) []Commit {
+	res := make([]Commit, 0)
+	i := 0
+	for _, c := range pl.Commits {
+ 		res = append(res, Commit{Message: c.Message, Username: c.Author.UserName, Sha: c.ID})
 		i += 1
 		if i == length {
 			break
